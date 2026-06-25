@@ -1,1 +1,203 @@
-<h1>goldfish</h1>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>點擊餵金魚小遊戲 (Goldfish Feeding Game)</title>
+    <style>
+        /* 遊戲背景：模擬水箱藍色 */
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #0ea5e9, #0284c7);
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            user-select: none;
+            height: 100vh;
+        }
+
+        /* 頂部資訊欄 */
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: white;
+            z-index: 10;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+        }
+
+        h1 { margin: 0 0 5px 0; font-size: 24px; }
+        p { margin: 0; font-size: 16px; opacity: 0.9; }
+        #score-board { font-size: 20px; font-weight: bold; color: #f59e0b; margin-top: 5px; }
+
+        /* 純 CSS 繪製的金魚 */
+        #goldfish {
+            position: absolute;
+            width: 80px;
+            height: 50px;
+            background-color: #f97316; /* 橘色身體 */
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: left 0.1s linear, top 0.1s linear;
+            z-index: 5;
+        }
+
+        /* 金魚眼睛 */
+        #goldfish::before {
+            content: '';
+            position: absolute;
+            top: 12px;
+            right: 15px;
+            width: 10px;
+            height: 10px;
+            background-color: white;
+            border-radius: 50%;
+        }
+        /* 魚瞳孔 */
+        #goldfish::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 5px;
+            height: 5px;
+            background-color: black;
+            border-radius: 50%;
+        }
+
+        /* 魚尾巴 */
+        .tail {
+            position: absolute;
+            left: -20px;
+            top: 10px;
+            width: 30px;
+            height: 30px;
+            background-color: #fb923c;
+            clip-path: polygon(0 0, 100% 50%, 0 100%, 40% 50%);
+        }
+
+        /* 魚飼料樣式 */
+        .food {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: #78350f; /* 咖啡色顆粒 */
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <h1>Goldfish Feeding Game</h1>
+        <p>點擊畫面上任意地方，扔下飼料餵金魚吧！</p>
+        <div id="score-board">已餵食次數: <span id="score">0</span></div>
+    </div>
+
+    <!-- 金魚主體 -->
+    <div id="goldfish">
+        <div class="tail"></div>
+    </div>
+
+    <script>
+        const goldfish = document.getElementById('goldfish');
+        const scoreDisplay = document.getElementById('score');
+        
+        let score = 0;
+        let fishX = window.innerWidth / 2;
+        let fishY = window.innerHeight / 2;
+        let fishSpeed = 4; // 金魚游動速度
+        let targetFacing = 1; // 1 代表朝右，-1 代表朝左
+
+        let foods = [];
+
+        // 監聽點擊事件：產生飼料
+        window.addEventListener('click', (e) => {
+            // 如果點擊的是 UI 文字區域則不觸發
+            if (e.target.closest('#ui-layer')) return;
+
+            const foodEl = document.createElement('div');
+            foodEl.className = 'food';
+            foodEl.style.left = e.clientX + 'px';
+            foodEl.style.top = e.clientY + 'px';
+            
+            document.body.appendChild(foodEl);
+
+            foods.push({
+                element: foodEl,
+                x: e.clientX,
+                y: e.clientY
+            });
+        });
+
+        // 遊戲主迴圈：控制金魚游動與飼料下沉
+        function gameLoop() {
+            // 1. 處理飼料緩慢下沉
+            for (let i = foods.length - 1; i >= 0; i--) {
+                let food = foods[i];
+                food.y += 1; // 下沉速度
+                food.element.style.top = food.y + 'px';
+
+                // 如果飼料沉出螢幕外就移除
+                if (food.y > window.innerHeight) {
+                    food.element.remove();
+                    foods.splice(i, 1);
+                }
+            }
+
+            // 2. 控制金魚移動邏輯
+            if (foods.length > 0) {
+                // 鎖定最近的一顆飼料
+                let targetFood = foods[0];
+                
+                let dx = targetFood.x - fishX;
+                let dy = targetFood.y - fishY;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                // 如果距離夠近，金魚就把飼料吃掉
+                if (distance < 30) {
+                    targetFood.element.remove();
+                    foods.shift(); // 移除已被吃掉的飼料
+                    score++;
+                    scoreDisplay.textContent = score;
+                } else {
+                    // 往飼料方向游動
+                    fishX += (dx / distance) * fishSpeed;
+                    fishY += (dy / distance) * fishSpeed;
+
+                    // 判斷金魚面朝方向（根據目的地改變角度）
+                    if (dx > 5) {
+                        targetFacing = 1; // 朝右
+                    } else if (dx < -5) {
+                        targetFacing = -1; // 朝左
+                    }
+                }
+            } else {
+                // 沒飼料時，金魚在原地輕微漂浮
+                fishY += Math.sin(Date.now() / 400) * 0.5;
+            }
+
+            // 3. 更新金魚在畫面上的渲染位置與方向
+            goldfish.style.left = fishX + 'px';
+            goldfish.style.top = fishY + 'px';
+            
+            // 運用 CSS scaleX 來翻轉金魚方向
+            if (targetFacing === 1) {
+                goldfish.style.transform = `translate(-50%, -50%) scaleX(1)`;
+            } else {
+                goldfish.style.transform = `translate(-50%, -50%) scaleX(-1)`;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 啟動遊戲迴圈
+        gameLoop();
+    </script>
+</body>
+</html>
