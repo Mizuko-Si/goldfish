@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>金魚飼養與毀滅小遊戲</title>
+    <title>金魚的一百種死法小遊戲</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(to bottom, #0b4f6c, #011627);
+            background: linear-gradient(to bottom, #0c4a6e, #0f172a);
             overflow: hidden;
             font-family: Arial, sans-serif;
             user-select: none;
@@ -27,25 +27,33 @@
         }
 
         h1 { margin: 0 0 5px 0; font-size: 24px; color: #e0f2fe; }
-        #score-board { font-size: 18px; font-weight: bold; color: #f59e0b; margin-bottom: 10px; }
+        #score-board { font-size: 18px; font-weight: bold; color: #f59e0b; margin-bottom: 12px; }
 
-        /* 毀滅按鈕樣式 */
-        #kill-btn {
-            background-color: #ef4444;
+        /* 按鈕區域 */
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .kill-btn {
             color: white;
             border: none;
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 10px 16px;
+            font-size: 14px;
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: background 0.2s, transform 0.1s;
+            transition: transform 0.1s, opacity 0.2s;
         }
-        #kill-btn:hover { background-color: #dc2626; }
-        #kill-btn:active { transform: scale(0.95); }
+        .kill-btn:active { transform: scale(0.95); }
+        
+        #btn-lightning { background-color: #eab308; color: #000; } /* 黃色閃電 */
+        #btn-poison { background-color: #22c55e; } /* 綠色毒藥 */
+        #btn-overfeed { background-color: #ef4444; } /* 紅色撐爆 */
 
-        /* 活金魚與屍體的通用基礎樣式 */
+        /* 金魚基礎樣式 */
         .fish {
             position: absolute;
             width: 80px;
@@ -53,6 +61,7 @@
             border-radius: 50%;
             z-index: 5;
             transform-origin: center;
+            transition: background-color 0.3s, width 0.3s, height 0.3s;
         }
         .fish::before {
             content: '';
@@ -81,18 +90,19 @@
             width: 30px;
             height: 30px;
             clip-path: polygon(0 0, 100% 50%, 0 100%, 40% 50%);
+            transition: background-color 0.3s;
         }
 
-        /* 屍體特有外觀：眼睛變叉叉 */
+        /* 死亡共同特徵：眼睛變叉叉 */
         .dead-fish::before {
             content: '×';
             position: absolute;
-            top: 5px;
+            top: 4px;
             right: 12px;
             width: auto;
             height: auto;
             background: none;
-            color: #475569;
+            color: #1e293b;
             font-size: 18px;
             font-weight: bold;
         }
@@ -112,32 +122,31 @@
 <body>
 
     <div id="ui-layer">
-        <h1>Goldfish Life & Death</h1>
-        <div id="score-board">已餵食次數: <span id="score">0</span> | 累計犧牲: <span id="dead-count">0</span></div>
-        <button id="kill-btn">⚡ 殺死當前金魚 ⚡</button>
+        <h1>Goldfish Ways to Die</h1>
+        <div id="score-board">已餵食: <span id="score">0</span> | 累計死亡: <span id="dead-count">0</span></div>
+        <div class="btn-group">
+            <button id="btn-lightning" class="kill-btn">⚡ 電擊</button>
+            <button id="btn-poison" class="kill-btn">🤢 毒殺</button>
+            <button id="btn-overfeed" class="kill-btn">💥 撐爆</button>
+        </div>
     </div>
 
     <script>
         const scoreDisplay = document.getElementById('score');
         const deadDisplay = document.getElementById('dead-count');
-        const killBtn = document.getElementById('kill-btn');
         
         let score = 0;
         let deadCount = 0;
         let foods = [];
         let deadFishes = [];
 
-        // 隨機顏色產生器
         const fishColors = [
-            { body: '#f97316', tail: '#fb923c' }, // 經典橘
-            { body: '#ef4444', tail: '#f87171' }, // 紅色
-            { body: '#facc15', tail: '#fde047' }, // 黃金
-            { body: '#e2e8f0', tail: '#cbd5e1' }, // 白金
-            { body: '#a855f7', tail: '#c084fc' }, // 紫羅蘭
-            { body: '#334155', tail: '#475569' }  // 黑斑
+            { body: '#f97316', tail: '#fb923c' }, // 橘
+            { body: '#facc15', tail: '#fde047' }, // 黃
+            { body: '#e2e8f0', tail: '#cbd5e1' }, // 白
+            { body: '#a855f7', tail: '#c084fc' }  // 紫
         ];
 
-        // 定義現存金魚的狀態物件
         let currentFish = {
             element: null,
             tailElement: null,
@@ -145,13 +154,11 @@
             y: window.innerHeight / 2,
             speed: 4,
             facing: 1,
-            color: fishColors[0],
             isDead: false
         };
 
-        // 產生新金魚的函式
         function spawnNewGoldfish(fromEdge = false) {
-            if (currentFish.element) {
+            if (currentFish.element && !currentFish.isDead) {
                 currentFish.element.remove();
             }
 
@@ -162,17 +169,15 @@
             el.appendChild(tailEl);
             document.body.appendChild(el);
 
-            // 隨機挑選顏色
             const randomColor = fishColors[Math.floor(Math.random() * fishColors.length)];
             el.style.backgroundColor = randomColor.body;
             tailEl.style.backgroundColor = randomColor.tail;
 
-            // 如果是下一隻游進來的，隨機從左側或右側外面進場
             let startX = window.innerWidth / 2;
             let startY = window.innerHeight / 2;
             if (fromEdge) {
                 startX = Math.random() > 0.5 ? -100 : window.innerWidth + 100;
-                startY = Math.random() * (window.innerHeight * 0.6) + 100;
+                startY = Math.random() * (window.innerHeight * 0.5) + 150;
             }
 
             currentFish = {
@@ -182,15 +187,14 @@
                 y: startY,
                 speed: 4,
                 facing: 1,
-                color: randomColor,
                 isDead: false
             };
         }
 
-        // 初始化第一隻金魚
+        // 初始化第一隻
         spawnNewGoldfish(false);
 
-        // 監聽點擊畫面丟飼料
+        // 點擊畫面丟飼料
         window.addEventListener('click', (e) => {
             if (e.target.closest('#ui-layer')) return;
 
@@ -203,36 +207,59 @@
             foods.push({ element: foodEl, x: e.clientX, y: e.clientY });
         });
 
-        // 監聽殺死金魚按鈕
-        killBtn.addEventListener('click', () => {
-            if (currentFish.isDead) return; // 如果已經在死沒必要再死一次
-
+        // 核心死亡處置函式
+        function killGoldfish(type) {
+            if (currentFish.isDead) return;
             currentFish.isDead = true;
             deadCount++;
             deadDisplay.textContent = deadCount;
 
-            // 將當前金魚轉化為「屍體物件」轉移至屍體陣列
             const deadEl = currentFish.element;
+            const deadTailEl = currentFish.tailElement;
             deadEl.classList.add('dead-fish');
-            
-            deadFishes.push({
+
+            let deadObj = {
                 element: deadEl,
                 x: currentFish.x,
                 y: currentFish.y,
                 facing: currentFish.facing,
-                // 沉降到最下方，並加一點隨機堆疊高低落差（避免完全重疊）
-                targetBottom: window.innerHeight - 30 - (Math.random() * 15)
-            });
+                type: type, // 'lightning', 'poison', 'overfeed'
+                fallSpeed: 2,
+                sinAngle: Math.random() * 10, // 用於中毒搖晃
+                targetBottom: window.innerHeight - 30 - (Math.random() * 20)
+            };
 
-            // 1秒後新金魚從旁邊游進來
+            // 根據死法改變外觀
+            if (type === 'lightning') {
+                deadEl.style.backgroundColor = '#1e293b'; // 焦黑
+                deadTailEl.style.backgroundColor = '#334155';
+                deadObj.fallSpeed = 5; // 電擊沉得快
+            } else if (type === 'poison') {
+                deadEl.style.backgroundColor = '#22c55e'; // 劇毒綠
+                deadTailEl.style.backgroundColor = '#15803d';
+                deadObj.fallSpeed = 1.2; // 中毒慢慢飄
+            } else if (type === 'overfeed') {
+                deadEl.style.width = '140px'; // 身體膨脹
+                deadEl.style.height = '85px';
+                deadObj.fallSpeed = 2.5;
+            }
+
+            deadFishes.push(deadObj);
+
+            // 1秒後重生新魚
             setTimeout(() => {
                 spawnNewGoldfish(true);
             }, 1000);
-        });
+        }
 
-        // 遊戲主迴圈
+        // 綁定三個按鈕事件
+        document.getElementById('btn-lightning').addEventListener('click', () => killGoldfish('lightning'));
+        document.getElementById('btn-poison').addEventListener('click', () => killGoldfish('poison'));
+        document.getElementById('btn-overfeed').addEventListener('click', () => killGoldfish('overfeed'));
+
+        // 遊戲物理與邏輯迴圈
         function gameLoop() {
-            // 1. 處理飼料下沉
+            // 1. 飼料下沉
             for (let i = foods.length - 1; i >= 0; i--) {
                 let food = foods[i];
                 food.y += 1.5;
@@ -243,7 +270,7 @@
                 }
             }
 
-            // 2. 處理活金魚移動
+            // 2. 活魚尋路與進食
             if (!currentFish.isDead && currentFish.element) {
                 if (foods.length > 0) {
                     let targetFood = foods[0];
@@ -251,7 +278,7 @@
                     let dy = targetFood.y - currentFish.y;
                     let distance = Math.sqrt(dx * dx + dy * dy);
 
-                    if (distance < 30) {
+                    if (distance < 35) {
                         targetFood.element.remove();
                         foods.shift();
                         score++;
@@ -262,26 +289,36 @@
                         currentFish.facing = dx > 5 ? 1 : (dx < -5 ? -1 : currentFish.facing);
                     }
                 } else {
-                    // 閒置漂浮
-                    currentFish.y += Math.sin(Date.now() / 400) * 0.5;
+                    currentFish.y += Math.sin(Date.now() / 400) * 0.4;
                 }
 
-                // 渲染活魚
                 currentFish.element.style.left = currentFish.x + 'px';
                 currentFish.element.style.top = currentFish.y + 'px';
                 currentFish.element.style.transform = `translate(-50%, -50%) scaleX(${currentFish.facing})`;
             }
 
-            // 3. 處理死魚屍體緩慢下沉與翻肚（倒過來）
+            // 3. 處理不同死法的屍體運動軌跡
             for (let i = 0; i < deadFishes.length; i++) {
                 let dead = deadFishes[i];
                 if (dead.y < dead.targetBottom) {
-                    dead.y += 2.5; // 屍體下沉速度
+                    dead.y += dead.fallSpeed;
+                    
+                    // 特殊死法軌跡：中毒會左右晃蕩下沉
+                    if (dead.type === 'poison') {
+                        dead.sinAngle += 0.05;
+                        dead.x += Math.sin(dead.sinAngle) * 1.5;
+                    }
                     dead.element.style.top = dead.y + 'px';
                 }
                 dead.element.style.left = dead.x + 'px';
-                // scaleY(-1) 讓魚肚朝上翻過去，呈現死亡狀態
-                dead.element.style.transform = `translate(-50%, -50%) scaleX(${dead.facing}) scaleY(-1)`;
+                
+                // 根據死法套用旋轉角度（翻肚反轉）
+                if (dead.type === 'overfeed') {
+                    // 撐爆的魚體積大，維持大尺寸翻肚
+                    dead.element.style.transform = `translate(-50%, -50%) scaleX(${dead.facing}) scaleY(-1)`;
+                } else {
+                    dead.element.style.transform = `translate(-50%, -50%) scaleX(${dead.facing}) scaleY(-1)`;
+                }
             }
 
             requestAnimationFrame(gameLoop);
