@@ -1,0 +1,29 @@
+/* 基本清除預設樣式 */
+body {
+    margin: 0;
+}
+ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* 核心 Flexbox 排版屬性拆解 */
+.navbar {
+    display: flex;                  /* 啟動 Flex 排版，使 Logo 和 <ul> 變為左右排列 */
+    justify-content: space-between; /* 主軸對齊：Logo 靠最左，選單靠最右，兩端對齊 */
+    align-items: center;            /* 交叉軸對齊：不論高度如何，內容一律垂直置中 */
+    background-color: #333;
+    padding: 15px 30px;
+    color: white;
+}
+
+.nav-links {
+    display: flex;                  /* 再次啟動 Flex，使選單內的 <li> 項目由垂直變為水平排列 */
+    gap: 20px;                      /* 項目與項目之間的間距固定為 20px */
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+}

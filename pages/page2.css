@@ -1,0 +1,11 @@
+.box-example {
+    width: 300px;
+    height: 150px;
+    background-color: #e0f7fa;
+    
+    /* 核心排版屬性拆解 */
+    padding: 20px;            /* 內邊距：內容與邊框之間的留白 */
+    border: 5px solid #00838f; /* 邊框：5px 粗、實線、深青色 */
+    margin: 50px;             /* 外邊距：這個盒子與網頁邊緣或其他元素的推擠距離 */
+    box-sizing: border-box;   /* 鎖定寬高：強迫總寬度固定在 300px，不被 padding 撐大 */
+}
